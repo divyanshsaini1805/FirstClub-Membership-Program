@@ -1,0 +1,92 @@
+spring:
+  application:
+    name: firstclub-membership
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/membership}
+    username: ${DB_USERNAME:membership}
+    password: ${DB_PASSWORD:membership}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 10000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: always
+    include-binding-errors: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-me-this-is-a-demo-secret-replace-in-prod-please-32bytes-min}
+      access-token-ttl: PT24H
+      issuer: firstclub-membership
+  wallet:
+    signup-bonus: ${WALLET_SIGNUP_BONUS:50000.00}
+  subscription:
+    auto-renew: false
+  eligibility:
+    sweeper:
+      enabled: true
+      cron: "0 0 3 * * *"   # nightly 03:00 UTC
+  cache:
+    plans-ttl: PT10M
+    tiers-ttl: PT10M
+    membership-snapshot-ttl: PT1H
+  idempotency:
+    ttl: PT24H
+
+logging:
+  level:
+    root: INFO
+    com.firstclub: DEBUG
+    org.hibernate.SQL: INFO
+  pattern:
+    level: "%5p [traceId=%X{traceId:-} userId=%X{userId:-}]"

@@ -1,0 +1,34 @@
+spring:
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  data:
+    redis:
+      timeout: 2000
+app:
+  security:
+    jwt:
+      secret: test-secret-must-be-at-least-32-bytes-long-padding-for-hs256-key
+      access-token-ttl: PT1H
+      issuer: firstclub-test
+  wallet:
+    signup-bonus: 50000.00
+  subscription:
+    auto-renew: false
+  eligibility:
+    sweeper:
+      enabled: false
+      cron: "0 0 0 * * *"
+  cache:
+    plans-ttl: PT5M
+    tiers-ttl: PT5M
+    membership-snapshot-ttl: PT5M
+  idempotency:
+    ttl: PT1H
+logging:
+  level:
+    com.firstclub: INFO
+    org.hibernate.SQL: WARN

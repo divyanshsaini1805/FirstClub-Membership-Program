@@ -1,0 +1,129 @@
+{
+  "info": {
+    "name": "FirstClub Membership",
+    "description": "End-to-end API collection for the FirstClub Membership Program. Set the {{base}} variable to where the app is running (default http://localhost:8080). After Register, the script writes {{token}} so all later requests are pre-authenticated.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}" }]
+  },
+  "item": [
+    {
+      "name": "Public",
+      "item": [
+        { "name": "Ping",
+          "request": { "method": "GET", "url": "{{base}}/api/v1/ping" } },
+        { "name": "List Plans",
+          "request": { "method": "GET", "url": "{{base}}/api/v1/plans" } },
+        { "name": "List Tiers",
+          "request": { "method": "GET", "url": "{{base}}/api/v1/tiers" } }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["const r = pm.response.json(); pm.collectionVariables.set('token', r.accessToken);"], "type": "text/javascript" }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{base}}/api/v1/auth/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"demo@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Demo User\",\n  \"cohort\": \"REGULAR\"\n}" }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["const r = pm.response.json(); pm.collectionVariables.set('token', r.accessToken);"], "type": "text/javascript" }
+          }],
+          "request": {
+            "method": "POST",
+            "url": "{{base}}/api/v1/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"demo@example.com\",\n  \"password\": \"password123\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        { "name": "Get wallet",
+          "request": { "method": "GET", "url": "{{base}}/api/v1/wallet" } },
+        { "name": "List ledger entries",
+          "request": { "method": "GET", "url": "{{base}}/api/v1/wallet/transactions" } }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "item": [
+        {
+          "name": "Get membership snapshot",
+          "request": { "method": "GET", "url": "{{base}}/api/v1/users/me/membership" }
+        },
+        {
+          "name": "Subscribe (MONTHLY + SILVER)",
+          "request": {
+            "method": "POST",
+            "url": "{{base}}/api/v1/users/me/subscriptions",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "subscribe-{{$timestamp}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"planId\": 1, \"tierId\": 1}" }
+          }
+        },
+        {
+          "name": "Change tier (Silver → Gold, prorated)",
+          "request": {
+            "method": "POST",
+            "url": "{{base}}/api/v1/users/me/subscriptions/1/change-tier",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"targetTierId\": 2}" }
+          }
+        },
+        {
+          "name": "Change tier (Gold → Silver, scheduled)",
+          "request": {
+            "method": "POST",
+            "url": "{{base}}/api/v1/users/me/subscriptions/1/change-tier",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"targetTierId\": 1}" }
+          }
+        },
+        {
+          "name": "Cancel",
+          "request": { "method": "DELETE", "url": "{{base}}/api/v1/users/me/subscriptions/1" }
+        }
+      ]
+    },
+    {
+      "name": "Eligibility",
+      "item": [
+        {
+          "name": "Place order (triggers tier re-eval)",
+          "request": {
+            "method": "POST",
+            "url": "{{base}}/api/v1/orders",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"amount\": 5000}" }
+          }
+        },
+        {
+          "name": "Force re-evaluation",
+          "request": { "method": "POST", "url": "{{base}}/api/v1/users/me/eligibility/reevaluate" }
+        }
+      ]
+    }
+  ]
+}
