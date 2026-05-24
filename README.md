@@ -26,47 +26,74 @@ Spring Boot 3.2, PostgreSQL, and Redis.
 
 ## Quick start
 
-```bash
-# One command — Postgres, Redis, and the app
-docker compose up --build
+Two scripts cover everything — pick the one for your OS.
 
-# Then
-open http://localhost:8080/swagger-ui.html
-curl http://localhost:8080/api/v1/ping
-```
+**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/),
+Java 17+, Maven 3.9+
 
-If port 8080 is taken on your host, set `APP_PORT` to a free one:
+### Mac / Linux
 
 ```bash
-APP_PORT=8090 docker compose up --build
+chmod +x run.sh
+./run.sh
 ```
 
-For dev loop:
+### Windows (PowerShell)
+
+```powershell
+.\run.ps1
+```
+
+Both scripts:
+1. Build the Docker image for the app
+2. Start Postgres, Redis, and the app via `docker compose`
+3. Wait until the app is healthy
+4. Run unit tests and Testcontainers-backed integration tests (`mvn verify`)
+
+After they finish:
+
+| URL | What |
+| --- | --- |
+| `http://localhost:8080/swagger-ui.html` | Interactive API docs |
+| `http://localhost:8080/api/v1/ping` | Smoke-test endpoint |
+| `http://localhost:8080/actuator/health` | Health check |
+
+**Options:**
+
+```bash
+# Skip tests (faster — just build + start)
+./run.sh --skip-tests
+.\run.ps1 -SkipTests
+
+# Use a different port (e.g. if 8080 is taken)
+PORT=8090 ./run.sh
+.\run.ps1 -Port 8090
+```
+
+**Stop everything:**
+
+```bash
+docker compose down        # stop containers, keep Postgres data
+docker compose down -v     # stop containers and wipe Postgres data
+```
+
+### Dev loop (app on the host, infra in Docker)
 
 ```bash
 docker compose up -d postgres redis
-JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn spring-boot:run
+mvn spring-boot:run        # uses application-local.yml; hits localhost:5432 and localhost:6379
 ```
 
 ### End-to-end demo
 
 ```bash
-BASE=http://localhost:8080 ./scripts/demo.sh
+BASE=http://localhost:8080 ./scripts/demo.sh    # Mac/Linux
+$env:BASE = 'http://localhost:8080'; .\scripts\demo.ps1   # Windows
 ```
 
 The script walks register → subscribe → upgrade → schedule-downgrade →
 orders → auto-promotion → cancel → idempotent replay, printing the response
 at each step.
-
-### Tests
-
-```bash
-mvn test            # unit tests
-mvn verify          # + Testcontainers-backed integration tests (needs Docker)
-```
-
-The integration tests start their own Postgres + Redis containers, so
-nothing about your environment matters apart from Docker being up.
 
 ## Architecture at a glance
 

@@ -11,11 +11,11 @@ COPY src ./src
 RUN mvn -B -ntp clean package -DskipTests
 
 # ---------- runtime stage ----------
-FROM eclipse-temurin:17-jre AS runtime
+FROM eclipse-temurin:17-jre-alpine AS runtime
 WORKDIR /app
 
-# Non-root user.
-RUN groupadd -r app && useradd -r -g app -d /app app && chown -R app:app /app
+# Non-root user (Alpine busybox addgroup/adduser — avoids Debian shadow-utils segfault on some WSL2 kernels).
+RUN addgroup -S app && adduser -S -G app -h /app app && chown -R app:app /app
 USER app
 
 COPY --from=build /workspace/target/membership.jar /app/membership.jar
