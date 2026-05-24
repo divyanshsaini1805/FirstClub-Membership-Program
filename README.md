@@ -150,21 +150,23 @@ com.firstclub.membership
 
 ## API surface (v1)
 
-| Method | Path | Auth |
-| --- | --- | --- |
-| `POST` | `/api/v1/auth/register` | public |
-| `POST` | `/api/v1/auth/login` | public |
-| `GET`  | `/api/v1/plans` | public |
-| `GET`  | `/api/v1/tiers` | public |
-| `GET`  | `/api/v1/wallet` | bearer |
-| `GET`  | `/api/v1/wallet/transactions` | bearer |
-| `GET`  | `/api/v1/users/me/membership` | bearer |
-| `POST` | `/api/v1/users/me/subscriptions` | bearer, supports `Idempotency-Key` |
-| `POST` | `/api/v1/users/me/subscriptions/{id}/change-tier` | bearer, supports `Idempotency-Key` |
-| `DELETE` | `/api/v1/users/me/subscriptions/{id}` | bearer |
-| `POST` | `/api/v1/orders` | bearer |
-| `POST` | `/api/v1/users/me/eligibility/reevaluate` | bearer |
-| `GET`  | `/actuator/health` / `/swagger-ui.html` / `/v3/api-docs` | public |
+| Method | Path | Auth | What it does |
+| --- | --- | --- | --- |
+| `POST` | `/api/v1/auth/register` | public | Creates a user + wallet. Wallet is credited with the signup bonus on creation. Returns a JWT. |
+| `POST` | `/api/v1/auth/login` | public | Authenticates with email + password. Returns a fresh JWT. |
+| `GET`  | `/api/v1/plans` | public | Lists the billing-cadence catalogue: Monthly (30 d / 199), Quarterly (90 d / 499), Yearly (365 d / 1,499). |
+| `GET`  | `/api/v1/tiers` | public | Lists the feature-level catalogue: Silver (free), Gold (500), Platinum (1,500), each with their benefit bindings and per-tier JSONB config. |
+| `GET`  | `/api/v1/wallet` | bearer | Returns current wallet balance. Protected by an `@Version` optimistic lock — concurrent debits produce a `409 CONCURRENT_MODIFICATION` instead of a silent double-charge. |
+| `GET`  | `/api/v1/wallet/transactions` | bearer | Returns the append-only ledger. Rows are never mutated — every credit and debit is a separate row with a unique `idempotency_key`. |
+| `GET`  | `/api/v1/users/me/membership` | bearer | Combined subscription view. `purchasedTier` is what the user paid for (billing source of truth). `effectiveTier` may be higher if an auto-promotion is active. Served from Redis cache; invalidated on every mutation. |
+| `POST` | `/api/v1/users/me/subscriptions` | bearer | Starts a subscription. Charges `planPrice + tierPrice` from the wallet in a single transaction. Supports `Idempotency-Key` — retrying the same request returns the original response without a double-charge. |
+| `POST` | `/api/v1/users/me/subscriptions/{id}/change-tier` | bearer | **Upgrade** (higher tier): prorated charge applied immediately. **Downgrade** (lower tier): scheduled for period end, no charge. Supports `Idempotency-Key`. |
+| `DELETE` | `/api/v1/users/me/subscriptions/{id}` | bearer | Cancels the subscription. Status moves to `CANCELLED`; access is retained until `endsAt`. |
+| `POST` | `/api/v1/orders` | bearer | Records an order and fires the eligibility engine after commit. Each order may trigger an auto-promotion rule (ORDER_COUNT or MONTHLY_ORDER_VALUE). |
+| `POST` | `/api/v1/users/me/eligibility/reevaluate` | bearer | Manually re-runs all promotion rules for the current user. Normally fires automatically on each order via an event listener; useful for testing. |
+| `GET`  | `/actuator/health` | public | Spring Actuator health — reports status of app, Postgres, and Redis. |
+| `GET`  | `/swagger-ui.html` | public | Interactive API docs (Springdoc OpenAPI). |
+| `GET`  | `/v3/api-docs` | public | Raw OpenAPI spec in JSON. |
 
 Errors follow RFC 7807 (`application/problem+json`) with a stable `code`
 field so clients can switch without parsing prose.
